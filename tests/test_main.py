@@ -53,3 +53,21 @@ def test_match_reminders_multiple_rules():
         {"name": "B", "lunar_days": [16]},
     ]
     assert match_reminders(16, rules) == ["A", "B"]
+
+
+from main import build_message
+
+
+def test_build_message_single_reminder():
+    msg = build_message(["拜土地公"], 16)
+    assert msg == "🙏 明天是農曆十六，記得準備供品拜土地公喔！"
+
+
+def test_build_message_lunar_day_two_uses_correct_wording():
+    msg = build_message(["拜土地公"], 2)
+    assert msg == "🙏 明天是農曆初二，記得準備供品拜土地公喔！"
+
+
+def test_build_message_multiple_reminders_joins_names():
+    msg = build_message(["拜土地公", "其他節日"], 16)
+    assert msg == "🙏 明天是農曆十六，記得準備供品拜土地公、其他節日喔！"
