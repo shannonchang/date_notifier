@@ -111,3 +111,53 @@ def test_send_line_message_raises_on_http_error(mock_post):
         assert False, "expected HTTPError to be raised"
     except requests.HTTPError:
         pass
+
+
+import os
+from main import run
+
+
+@patch("main.send_line_message")
+def test_run_sends_message_on_matching_date(mock_send, monkeypatch):
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "tok")
+    monkeypatch.setenv("LINE_USER_ID", "uid")
+
+    exit_code = run(["--date", "2026-02-17"])  # tomorrow = 2026-02-18 = lunar day 2
+
+    assert exit_code == 0
+    mock_send.assert_called_once_with(
+        "tok", "uid", "🙏 明天是農曆初二，記得準備供品拜土地公喔！"
+    )
+
+
+@patch("main.send_line_message")
+def test_run_does_not_send_on_non_matching_date(mock_send, monkeypatch):
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "tok")
+    monkeypatch.setenv("LINE_USER_ID", "uid")
+
+    exit_code = run(["--date", "2026-02-20"])  # tomorrow = 2026-02-21, not a match
+
+    assert exit_code == 0
+    mock_send.assert_not_called()
+
+
+@patch("main.send_line_message")
+def test_run_dry_run_does_not_send(mock_send, monkeypatch):
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "tok")
+    monkeypatch.setenv("LINE_USER_ID", "uid")
+
+    exit_code = run(["--date", "2026-02-17", "--dry-run"])
+
+    assert exit_code == 0
+    mock_send.assert_not_called()
+
+
+@patch("main.send_line_message")
+def test_run_returns_nonzero_on_send_failure(mock_send, monkeypatch):
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "tok")
+    monkeypatch.setenv("LINE_USER_ID", "uid")
+    mock_send.side_effect = requests.HTTPError("boom")
+
+    exit_code = run(["--date", "2026-02-17"])
+
+    assert exit_code == 1

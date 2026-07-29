@@ -1,3 +1,6 @@
+import argparse
+import os
+import sys
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -51,3 +54,59 @@ def send_line_message(token: str, user_id: str, message: str) -> None:
         timeout=10,
     )
     response.raise_for_status()
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="LINE 農曆日期提醒")
+    parser.add_argument(
+        "--date",
+        type=str,
+        default=None,
+        help="Override 'today' as YYYY-MM-DD for testing (default: real current date)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the message instead of sending it via LINE",
+    )
+    return parser.parse_args(argv)
+
+
+def run(argv: list[str] | None = None) -> int:
+    args = parse_args(argv if argv is not None else sys.argv[1:])
+
+    if args.date:
+        y, m, d = (int(part) for part in args.date.split("-"))
+        now = datetime(y, m, d, tzinfo=TAIPEI_TZ)
+    else:
+        now = None
+
+    tomorrow = get_taipei_tomorrow(now)
+    lunar_day = get_lunar_day(tomorrow)
+    matched = match_reminders(lunar_day, REMINDERS)
+
+    if not matched:
+        print(f"{tomorrow} (農曆{lunar_day}日) 沒有符合的提醒規則，不發送。")
+        return 0
+
+    message = build_message(matched, lunar_day)
+
+    if args.dry_run:
+        print(f"[dry-run] 將發送訊息：{message}")
+        return 0
+
+    token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
+    user_id = os.environ["LINE_USER_ID"]
+
+    try:
+        send_line_message(token, user_id, message)
+    except requests.HTTPError as exc:
+        print(f"發送 LINE 訊息失敗：{exc}", file=sys.stderr)
+        return 1
+
+    print(f"已發送提醒：{message}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(run())
