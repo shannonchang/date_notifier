@@ -1,6 +1,8 @@
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import requests
+
 from lunar_python import Solar
 
 TAIPEI_TZ = ZoneInfo("Asia/Taipei")
@@ -33,3 +35,19 @@ def build_message(matched_names: list[str], lunar_day: int) -> str:
     day_label = _LUNAR_DAY_LABELS.get(lunar_day, f"{lunar_day}")
     names = "、".join(matched_names)
     return f"🙏 明天是農曆{day_label}，記得準備供品{names}喔！"
+
+
+LINE_PUSH_URL = "https://api.line.me/v2/bot/message/push"
+
+
+def send_line_message(token: str, user_id: str, message: str) -> None:
+    response = requests.post(
+        LINE_PUSH_URL,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        },
+        json={"to": user_id, "messages": [{"type": "text", "text": message}]},
+        timeout=10,
+    )
+    response.raise_for_status()

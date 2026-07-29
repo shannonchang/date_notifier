@@ -71,3 +71,43 @@ def test_build_message_lunar_day_two_uses_correct_wording():
 def test_build_message_multiple_reminders_joins_names():
     msg = build_message(["拜土地公", "其他節日"], 16)
     assert msg == "🙏 明天是農曆十六，記得準備供品拜土地公、其他節日喔！"
+
+
+from unittest.mock import patch, MagicMock
+import requests
+
+from main import send_line_message
+
+
+@patch("main.requests.post")
+def test_send_line_message_posts_correct_payload(mock_post):
+    mock_post.return_value = MagicMock(status_code=200)
+    mock_post.return_value.raise_for_status = MagicMock()
+
+    send_line_message("test-token", "test-user-id", "hello")
+
+    mock_post.assert_called_once_with(
+        "https://api.line.me/v2/bot/message/push",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-token",
+        },
+        json={
+            "to": "test-user-id",
+            "messages": [{"type": "text", "text": "hello"}],
+        },
+        timeout=10,
+    )
+
+
+@patch("main.requests.post")
+def test_send_line_message_raises_on_http_error(mock_post):
+    mock_response = MagicMock(status_code=400)
+    mock_response.raise_for_status.side_effect = requests.HTTPError("400 Client Error")
+    mock_post.return_value = mock_response
+
+    try:
+        send_line_message("test-token", "test-user-id", "hello")
+        assert False, "expected HTTPError to be raised"
+    except requests.HTTPError:
+        pass
