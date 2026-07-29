@@ -161,3 +161,25 @@ def test_run_returns_nonzero_on_send_failure(mock_send, monkeypatch):
     exit_code = run(["--date", "2026-02-17"])
 
     assert exit_code == 1
+
+
+@patch("main.send_line_message")
+def test_run_returns_nonzero_on_network_error(mock_send, monkeypatch):
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "tok")
+    monkeypatch.setenv("LINE_USER_ID", "uid")
+    mock_send.side_effect = requests.ConnectionError("boom")
+
+    exit_code = run(["--date", "2026-02-17"])
+
+    assert exit_code == 1
+
+
+@patch("main.send_line_message")
+def test_run_returns_nonzero_and_skips_send_when_credentials_missing(mock_send, monkeypatch):
+    monkeypatch.delenv("LINE_CHANNEL_ACCESS_TOKEN", raising=False)
+    monkeypatch.setenv("LINE_USER_ID", "uid")
+
+    exit_code = run(["--date", "2026-02-17"])
+
+    assert exit_code == 1
+    mock_send.assert_not_called()

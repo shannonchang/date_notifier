@@ -95,13 +95,17 @@ def run(argv: list[str] | None = None) -> int:
         print(f"[dry-run] 將發送訊息：{message}")
         return 0
 
-    token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
-    user_id = os.environ["LINE_USER_ID"]
+    token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "").strip()
+    user_id = os.environ.get("LINE_USER_ID", "").strip()
+    if not token or not user_id:
+        print("缺少 LINE_CHANNEL_ACCESS_TOKEN 或 LINE_USER_ID 環境變數。", file=sys.stderr)
+        return 1
 
     try:
         send_line_message(token, user_id, message)
-    except requests.HTTPError as exc:
-        print(f"發送 LINE 訊息失敗：{exc}", file=sys.stderr)
+    except requests.RequestException as exc:
+        detail = getattr(getattr(exc, "response", None), "text", "") or ""
+        print(f"發送 LINE 訊息失敗：{exc} {detail}", file=sys.stderr)
         return 1
 
     print(f"已發送提醒：{message}")
