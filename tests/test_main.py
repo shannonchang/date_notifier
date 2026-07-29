@@ -30,3 +30,26 @@ def test_get_lunar_day_known_sixteenth_day():
 
 def test_get_lunar_day_known_seventeenth_day():
     assert get_lunar_day(date(2026, 7, 30)) == 17
+
+
+from main import match_reminders, REMINDERS
+
+
+def test_match_reminders_hits_day_two():
+    assert match_reminders(2, REMINDERS) == ["拜土地公"]
+
+
+def test_match_reminders_hits_day_sixteen():
+    assert match_reminders(16, REMINDERS) == ["拜土地公"]
+
+
+def test_match_reminders_no_match():
+    assert match_reminders(10, REMINDERS) == []
+
+
+def test_match_reminders_multiple_rules():
+    rules = [
+        {"name": "A", "lunar_days": [2, 16]},
+        {"name": "B", "lunar_days": [16]},
+    ]
+    assert match_reminders(16, rules) == ["A", "B"]
